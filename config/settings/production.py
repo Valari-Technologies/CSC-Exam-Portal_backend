@@ -117,3 +117,13 @@ CSRF_COOKIE_HTTPONLY = True
 
 # Use environment-driven allowed hosts only (no wildcards)
 # ALLOWED_HOSTS already comes from env in base.py
+
+# Automatically allow Vercel URLs when running on Vercel
+if os.environ.get('VERCEL') == '1':
+    ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1']
+    if os.environ.get('ALLOWED_HOSTS'):
+        for host in os.environ.get('ALLOWED_HOSTS').split(','):
+            h = host.strip()
+            if h and h not in ALLOWED_HOSTS:
+                ALLOWED_HOSTS.append(h)
+
