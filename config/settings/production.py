@@ -127,5 +127,7 @@ if os.environ.get('VERCEL') == '1':
             if h and h not in ALLOWED_HOSTS:
                 ALLOWED_HOSTS.append(h)
     CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ORIGIN_ALLOW_ALL = True
+
 
 
