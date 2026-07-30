@@ -260,8 +260,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = MAX_UPLOAD_SIZE_BYTES
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Logging
-LOG_DIR = BASE_DIR / 'logs'
-LOG_DIR.mkdir(exist_ok=True)
+if os.environ.get('VERCEL') == '1':
+    LOG_DIR = Path('/tmp')
+else:
+    LOG_DIR = BASE_DIR / 'logs'
+    LOG_DIR.mkdir(exist_ok=True)
 
 LOGGING = {
     'version': 1,
