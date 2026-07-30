@@ -1,0 +1,16 @@
+# Development & CI tooling. Install with:  pip install -r requirements-dev.txt
+# Pulls in the runtime deps too so a dev env is one command.
+-r requirements.txt
+
+# Testing
+pytest>=7.4
+pytest-django>=4.7
+pytest-cov>=4.1
+
+# Formatting & linting
+black>=23.12
+flake8>=7.0
+isort>=5.13
+
+# Static typing
+mypy>=1.8
