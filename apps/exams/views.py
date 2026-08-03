@@ -133,17 +133,8 @@ class ExamSessionViewSet(viewsets.GenericViewSet):
         the browser, or re-logging never resets or pauses it. If time has run
         out the session is auto-submitted. Returns True if it auto-submitted.
 
-        Two independent deadlines apply and the EARLIER one wins:
-
-        1. The test's own duration, counted from ``started_at``.
-        2. The assignment's ``end_datetime`` — a hard wall on the whole window.
-
-        (2) is what stops a student entering at 09:59 of a window closing at
-        10:00 and then working for the full duration past it. It means a late
-        starter gets less than the full duration; that is deliberate, because
-        the assignment window is the schedule the exam is actually run to.
-        Every mutating endpoint routes through here, so the wall is enforced on
-        resume, auto-save, submit and cheat-event alike — not just at start.
+        Only the test's own duration, counted from ``started_at``, determines the countdown timer.
+        The assignment's ``end_datetime`` controls availability for starting, but not the duration.
         """
         if session.status != ExamSession.Status.IN_PROGRESS:
             return False
@@ -151,10 +142,6 @@ class ExamSessionViewSet(viewsets.GenericViewSet):
         now = timezone.now()
         elapsed = (now - session.started_at).total_seconds()
         remaining = max(0, session.test.duration_minutes * 60 - int(elapsed))
-
-        # The assignment window caps whatever the duration allows.
-        until_window_closes = int((session.assignment.end_datetime - now).total_seconds())
-        remaining = min(remaining, max(0, until_window_closes))
 
         if remaining <= 0:
             session.time_remaining_seconds = 0
