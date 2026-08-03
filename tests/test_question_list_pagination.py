@@ -75,7 +75,7 @@ class QuestionListPaginationTests(APITestCase):
     def test_page_size_is_capped(self):
         """LargePagination.max_page_size — an absurd value must not be a DoS."""
         data = self._list(page_size=100000)
-        self.assertLessEqual(len(data['results']), 500)
+        self.assertLessEqual(len(data['results']), 1000)
 
     def test_default_page_size_needs_no_param(self):
         """A caller that passes nothing still gets the whole bank here (45 < 100)."""

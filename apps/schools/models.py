@@ -9,14 +9,17 @@ class School(models.Model):
         INACTIVE = 'inactive', 'Inactive'
         SUSPENDED = 'suspended', 'Suspended'
 
+    class Board(models.TextChoices):
+        STATE_BOARD = 'state_board', 'State Board'
+        CBSE = 'cbse', 'CBSE Board'
+        MATRICULATION = 'matriculation', 'Matriculation'
+
     name = models.CharField(max_length=255)
-    # The School ID, surfaced in the UI under that name. Server-generated on create as
-    # <first 3 letters of name>_<3-digit sequence> (e.g. GRE_001) and never edited after:
-    # it is the prefix of every student login ID this school issues, so changing it would
-    # orphan those IDs. Rows created before this scheme keep their original codes.
+    # The School ID, surfaced in the UI under that name. Server-generated on create as a
+    # zero-padded sequence number (e.g. 001, 002…) and never edited after.
     code = models.CharField(max_length=20, unique=True, db_index=True,
-                            help_text='School ID — auto-generated from the school name '
-                                      '(e.g. GRE_001). Not editable.')
+                            help_text='School ID — auto-generated numeric sequence '
+                                      '(e.g. 001). Not editable.')
     address = models.TextField()
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
@@ -31,6 +34,15 @@ class School(models.Model):
     contact_phone = models.CharField(max_length=20)
     logo = models.ImageField(upload_to='schools/logos/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE, db_index=True)
+    school_board = models.CharField(
+        max_length=20, choices=Board.choices, default=Board.STATE_BOARD,
+        help_text='The academic board the school is affiliated with.',
+    )
+    # The official government-issued school code, distinct from the internal School ID (code).
+    school_code = models.CharField(
+        max_length=50, blank=True, default='',
+        help_text='Official government-issued school code.',
+    )
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

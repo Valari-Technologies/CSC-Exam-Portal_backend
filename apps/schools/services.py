@@ -23,47 +23,36 @@ SCHOOL_ID_SEQUENCE_WIDTH = 3
 
 
 def school_letter_prefix(school: School) -> str:
-    """The school's three-letter ID prefix, e.g. KAR_001 -> KAR.
+    """The school's three-letter ID prefix, e.g. Karimnagar Public School -> KAR.
 
     Shared by both the Student ID and Teacher ID schemes so their prefixes always agree.
-    Derived from the School ID (``school.code``) rather than the raw name because the School
-    ID is immutable: renaming a school must not fork the shape of its members' login/ID
-    prefixes mid-stream. For every school created under the current scheme the two are the
-    same anyway — the School ID is itself the first three letters of the name (generate_school_id).
+    Derived from the school name so that the prefix is stable and meaningful even though
+    the School ID itself is now a numeric sequence (e.g. 001).
 
-    Letters only, so a legacy code that mixes in digits (e.g. VGS003) still yields three
-    LETTERS; right-padded with X so the prefix is always exactly three characters.
+    Letters only, right-padded with X so the prefix is always exactly three characters.
     """
-    letters = re.sub(r'[^A-Z]', '', (school.code or '').upper())
+    letters = re.sub(r'[^A-Z]', '', (school.name or '').upper())
     return (letters[:SCHOOL_ID_PREFIX_LENGTH] or 'SCH').ljust(SCHOOL_ID_PREFIX_LENGTH, 'X')
 
 
 def generate_school_id(name: str) -> str:
-    """Next free School ID for a school called `name`, e.g. 'Green Valley School' -> 'GRE_001'.
+    """Next free School ID, e.g. '001', '002', '003'…
 
-    Format: the first three alphabetic characters of the name, uppercased, then an
-    underscore, then a zero-padded sequence that increments per prefix (GRE_001, GRE_002...).
-    Names with fewer than three letters are right-padded with X ('A1 School' -> 'ASC_001'
-    once non-letters are dropped; 'Z' -> 'ZXX_001') so the prefix is always three chars.
+    Format: a zero-padded numeric sequence, globally incremented across all schools.
+    The school name is no longer embedded in the ID.
     """
-    letters = re.sub(r'[^A-Z]', '', (name or '').upper())
-    prefix = (letters[:SCHOOL_ID_PREFIX_LENGTH] or 'SCH').ljust(SCHOOL_ID_PREFIX_LENGTH, 'X')
-
-    # Only codes this generator could have produced take part in the sequence. Legacy
-    # hand-entered codes (e.g. 'VGS003', 'TUTKNHSS1') are deliberately ignored rather than
-    # renumbered — they are the prefix of their students' login IDs.
-    pattern = re.compile(rf'^{prefix}_(\d+)$')
+    # Find the highest numeric-only code already in use.
+    pattern = re.compile(r'^\d+$')
     highest = 0
-    for code in School.objects.filter(code__startswith=f'{prefix}_').values_list('code', flat=True):
+    for code in School.objects.values_list('code', flat=True):
         match = pattern.match(code)
         if match:
-            highest = max(highest, int(match.group(1)))
+            highest = max(highest, int(code))
 
-    # Walk forward until the ID is genuinely free — guards against a code that was assigned
-    # manually or by an older scheme and skipped ahead of the sequence.
+    # Walk forward until the ID is genuinely free.
     candidate_number = highest + 1
     while True:
-        candidate = f'{prefix}_{candidate_number:0{SCHOOL_ID_SEQUENCE_WIDTH}d}'
+        candidate = f'{candidate_number:0{SCHOOL_ID_SEQUENCE_WIDTH}d}'
         if not School.objects.filter(code=candidate).exists():
             return candidate
         candidate_number += 1

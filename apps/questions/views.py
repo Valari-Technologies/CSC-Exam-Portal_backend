@@ -242,21 +242,35 @@ class QuestionViewSet(viewsets.ModelViewSet):
         found_ids = {q.pk for q in questions}
         skipped = [i for i in ids if i not in found_ids]
 
-        deleted = 0
-        archived = 0
-        for question in questions:
-            try:
-                # Each delete needs its own savepoint: a ProtectedError aborts the
-                # surrounding transaction, so without this the first in-use question
-                # would poison the rest of the batch.
-                with transaction.atomic():
-                    question.delete()
-                deleted += 1
-            except ProtectedError:
-                question.is_active = False
-                question.save(update_fields=['is_active'])
-                archived += 1
-                logger.info('Question %s archived (in use) instead of hard delete.', question.pk)
+        # Identify referenced questions using bulk queries to avoid loop overhead.
+        from apps.tests.models import TestQuestion
+        from apps.exams.models import ExamAnswer
+        from apps.results.models import ResultDetail
+
+        referenced_ids = set()
+
+        # Check references in TestQuestion
+        test_q_ids = TestQuestion.objects.filter(question_id__in=found_ids).values_list('question_id', flat=True).distinct()
+        referenced_ids.update(test_q_ids)
+
+        # Check references in ExamAnswer
+        exam_a_ids = ExamAnswer.objects.filter(question_id__in=found_ids).values_list('question_id', flat=True).distinct()
+        referenced_ids.update(exam_a_ids)
+
+        # Check references in ResultDetail
+        result_d_ids = ResultDetail.objects.filter(question_id__in=found_ids).values_list('question_id', flat=True).distinct()
+        referenced_ids.update(result_d_ids)
+
+        # Soft delete/archive the referenced questions
+        archived = len(referenced_ids)
+        if referenced_ids:
+            Question.objects.filter(id__in=referenced_ids).update(is_active=False)
+
+        # Hard delete the unreferenced questions
+        delete_ids = found_ids - referenced_ids
+        deleted = len(delete_ids)
+        if delete_ids:
+            Question.objects.filter(id__in=delete_ids).delete()
 
         return Response(
             {'deleted': deleted, 'archived': archived, 'skipped': len(skipped)},

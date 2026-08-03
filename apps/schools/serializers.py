@@ -44,6 +44,8 @@ class SchoolSerializer(serializers.ModelSerializer):
             'logo',
             'logo_url',
             'status',
+            'school_board',
+            'school_code',
             'created_by',
             'created_at',
             'updated_at',
@@ -51,9 +53,8 @@ class SchoolSerializer(serializers.ModelSerializer):
             'admin_email',
             'admin_setup_link',
         )
-        # `code` is the School ID — server-generated from the school name on create and
-        # immutable thereafter. It is the prefix of every student login ID issued by this
-        # school, so letting it be edited would silently orphan those IDs.
+        # `code` is the School ID — server-generated numeric sequence on create and
+        # immutable thereafter.
         read_only_fields = ('id', 'code', 'created_by', 'created_at', 'updated_at', 'logo_url')
 
     def get_logo_url(self, obj) -> str | None:
@@ -88,6 +89,11 @@ class SchoolSerializer(serializers.ModelSerializer):
         value = value.strip()
         if not value.isdigit() or not 4 <= len(value) <= 10:
             raise serializers.ValidationError('Pincode must be 4-10 digits.')
+        return value
+
+    def validate_school_code(self, value: str) -> str:
+        """Government-issued school code — must be non-empty on create."""
+        value = (value or '').strip()
         return value
 
     def validate_admin_email(self, value: str) -> str:
@@ -128,6 +134,17 @@ class SchoolSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 field: 'This field is required when creating a school.' for field in missing
             })
+
+        # school_board and school_code are required on create.
+        if not attrs.get('school_board'):
+            raise serializers.ValidationError({
+                'school_board': 'School Board is required.',
+            })
+        if not (attrs.get('school_code') or '').strip():
+            raise serializers.ValidationError({
+                'school_code': 'School Code is required.',
+            })
+
         return attrs
 
 
@@ -148,6 +165,8 @@ class SchoolListSerializer(serializers.ModelSerializer):
             'state',
             'official_email',
             'status',
+            'school_board',
+            'school_code',
             'user_count',
             'teachers_count',
             'students_count',

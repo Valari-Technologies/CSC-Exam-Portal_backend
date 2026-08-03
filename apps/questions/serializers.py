@@ -253,19 +253,54 @@ class QuestionBulkImportSerializer(serializers.Serializer):
                 'errors': [{'row': 0, 'error': f'Missing columns: {", ".join(sorted(missing))}'}],
             }
 
+        # Prefetch subjects and chapters to avoid N+1 queries.
+        # Cache of Subject.code.lower() -> Subject
+        subjects_cache = {
+            s.code.lower(): s
+            for s in Subject.objects.filter(school=school, is_active=True)
+            if s.code
+        }
+
+        # Cache of subject_id -> list of chapters for name matching,
+        # and subject_id -> dict of pk -> chapter for ID matching.
+        chapters_by_subject_name = {}  # subject_id -> {name.lower(): list[Chapter]}
+        chapters_by_subject_id = {}    # subject_id -> {id: Chapter}
+
+        all_chapters = Chapter.objects.filter(subject__school=school, is_active=True).select_related('subject')
+        for chapter in all_chapters:
+            sub_id = chapter.subject_id
+            if sub_id not in chapters_by_subject_name:
+                chapters_by_subject_name[sub_id] = {}
+            if sub_id not in chapters_by_subject_id:
+                chapters_by_subject_id[sub_id] = {}
+
+            name_lower = chapter.name.lower()
+            if name_lower not in chapters_by_subject_name[sub_id]:
+                chapters_by_subject_name[sub_id][name_lower] = []
+            chapters_by_subject_name[sub_id][name_lower].append(chapter)
+
+            chapters_by_subject_id[sub_id][chapter.pk] = chapter
+
         errors_list: list[dict] = []
-        success = 0
+        questions_to_create: list[Question] = []
 
         for idx, row in enumerate(rows, start=2):
             try:
-                self._validate_and_create_question(row, school, user, idx)
-                success += 1
+                question = self._validate_and_build_question(
+                    row, school, user, idx,
+                    subjects_cache, chapters_by_subject_name, chapters_by_subject_id
+                )
+                questions_to_create.append(question)
             except Exception as exc:
                 errors_list.append({'row': idx, 'error': str(exc)})
 
+        if questions_to_create:
+            with transaction.atomic():
+                Question.objects.bulk_create(questions_to_create)
+
         return {
             'total': len(rows),
-            'success': success,
+            'success': len(questions_to_create),
             'fail': len(errors_list),
             'errors': errors_list,
         }
@@ -295,15 +330,15 @@ class QuestionBulkImportSerializer(serializers.Serializer):
 
         return difficulty, marks, negative_marks
 
-    def _resolve_subject_and_chapter(self, row: dict, school: School) -> tuple[Subject, Chapter]:
+    def _resolve_subject_and_chapter_cached(
+        self, row: dict, school: School, subjects_cache: dict,
+        chapters_by_subject_name: dict, chapters_by_subject_id: dict
+    ) -> tuple[Subject, Chapter]:
         subject_id_raw = row.get('subject_id', '').strip()
         if not subject_id_raw:
             raise ValueError('subject_id (the Subject ID, e.g. KA_MAT_10) is required.')
 
-        subject = Subject.objects.filter(
-            school=school, code__iexact=subject_id_raw,
-        ).first()
-
+        subject = subjects_cache.get(subject_id_raw.lower())
         if subject is None:
             if subject_id_raw.isdigit():
                 raise ValueError(
@@ -325,28 +360,29 @@ class QuestionBulkImportSerializer(serializers.Serializer):
                 raise ValueError(
                     f'chapter_id must be an integer — got "{chapter_id_raw}".'
                 )
-            try:
-                chapter = Chapter.objects.get(pk=chapter_id, subject=subject)
-            except Chapter.DoesNotExist:
+
+            sub_id_chapters = chapters_by_subject_id.get(subject.id, {})
+            chapter = sub_id_chapters.get(chapter_id)
+            if chapter is None:
                 raise ValueError(
                     f'Chapter with id={chapter_id} does not exist '
                     f'under subject "{subject.name}".'
                 )
         elif chapter_name_raw:
-            qs = Chapter.objects.filter(
-                subject=subject, name__iexact=chapter_name_raw,
-            )
-            if qs.count() == 0:
+            sub_name_chapters = chapters_by_subject_name.get(subject.id, {})
+            matches = sub_name_chapters.get(chapter_name_raw.lower(), [])
+
+            if len(matches) == 0:
                 raise ValueError(
                     f'Chapter "{chapter_name_raw}" not found under '
                     f'subject "{subject.name}".'
                 )
-            if qs.count() > 1:
+            if len(matches) > 1:
                 raise ValueError(
                     f'Multiple chapters named "{chapter_name_raw}" — '
                     f'please use chapter_id instead.'
                 )
-            chapter = qs.first()
+            chapter = matches[0]
         else:
             raise ValueError(
                 'Either chapter_id or chapter_name must be provided.'
@@ -354,10 +390,11 @@ class QuestionBulkImportSerializer(serializers.Serializer):
 
         return subject, chapter
 
-    def _validate_and_create_question(
+    def _validate_and_build_question(
         self, row: dict, school: School, user, row_num: int,
+        subjects_cache: dict, chapters_by_subject_name: dict, chapters_by_subject_id: dict
     ) -> Question:
-        """Validate a single row and create a Question object."""
+        """Validate a single row and build a Question object without saving to DB."""
         question_text = row.get('question_text', '').strip()
         option_a = row.get('option_a', '').strip()
         option_b = row.get('option_b', '').strip()
@@ -373,30 +410,29 @@ class QuestionBulkImportSerializer(serializers.Serializer):
             raise ValueError('All four options (option_a through option_d) are required.')
 
         difficulty, marks, negative_marks = self._parse_difficulty_and_marks(row)
-        subject, chapter = self._resolve_subject_and_chapter(row, school)
+        subject, chapter = self._resolve_subject_and_chapter_cached(
+            row, school, subjects_cache, chapters_by_subject_name, chapters_by_subject_id
+        )
 
-        # Safety net (normally unreachable — both are looked up already scoped: the
-        # subject by school, the chapter by that subject).
+        # Safety net
         if subject.school_id != school.pk:
             raise ValueError(f'Subject "{subject.name}" does not belong to the selected school.')
         if chapter.subject_id != subject.pk:
             raise ValueError(f'Chapter "{chapter.name}" does not belong to subject "{subject.name}".')
 
-        with transaction.atomic():
-            question = Question.objects.create(
-                school=school,
-                subject=subject,
-                chapter=chapter,
-                created_by=user,
-                question_text=question_text,
-                option_a=option_a,
-                option_b=option_b,
-                option_c=option_c,
-                option_d=option_d,
-                correct_option=correct_option,
-                explanation=explanation,
-                difficulty=difficulty,
-                marks=marks,
-                negative_marks=negative_marks,
-            )
-        return question
+        return Question(
+            school=school,
+            subject=subject,
+            chapter=chapter,
+            created_by=user,
+            question_text=question_text,
+            option_a=option_a,
+            option_b=option_b,
+            option_c=option_c,
+            option_d=option_d,
+            correct_option=correct_option,
+            explanation=explanation,
+            difficulty=difficulty,
+            marks=marks,
+            negative_marks=negative_marks,
+        )
