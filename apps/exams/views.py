@@ -64,7 +64,7 @@ class ExamSessionViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'test', 'assignment']
-    search_fields = ['student__full_name', 'student__email']
+    search_fields = ['student__full_name', 'student__email', 'test__title', 'student__student_id']
     ordering_fields = ['started_at', 'submitted_at']
     ordering = ['-started_at']
 
@@ -108,6 +108,18 @@ class ExamSessionViewSet(viewsets.GenericViewSet):
             qs = qs.filter(submitted_at__date__lte=params['date_to'])
 
         return qs
+
+    def filter_queryset(self, queryset):
+        search_type = self.request.query_params.get('search_type')
+        if search_type == 'student_name':
+            self.search_fields = ['student__full_name', 'student__email']
+        elif search_type == 'chapter_name':
+            self.search_fields = ['test__title']
+        elif search_type == 'student_id':
+            self.search_fields = ['student__student_id']
+        else:
+            self.search_fields = ['student__full_name', 'student__email', 'test__title', 'student__student_id']
+        return super().filter_queryset(queryset)
 
     def get_serializer_class(self):
         if self.action == 'list':
