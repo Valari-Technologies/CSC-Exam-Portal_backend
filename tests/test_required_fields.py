@@ -37,6 +37,8 @@ class SchoolRequiredFieldsTests(APITestCase):
             'status': 'active',
             'admin_full_name': 'Admin One',
             'admin_email': 'admin@greenvalley.edu',
+            'school_board': 'cbse',
+            'school_code': '33010100101',
         }
         payload.update(overrides)
         return payload

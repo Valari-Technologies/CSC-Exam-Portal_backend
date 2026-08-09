@@ -8,6 +8,12 @@ _REQUIRED_PRODUCTION_ENV_VARS = [
     'JWT_SIGNING_KEY',
     'FRONTEND_URL',
     'EMAIL_HOST',
+    # EMAIL_HOST_USER is the SMTP login. Gmail (and every authenticated SMTP
+    # relay) rejects the session without it, so a deploy that sets the password
+    # but not the user silently fails to send every email — password resets and
+    # account-setup links alike. Require it so the misconfiguration surfaces at
+    # startup instead of as "the reset email never arrives".
+    'EMAIL_HOST_USER',
     'EMAIL_HOST_PASSWORD',
     'ALLOWED_HOSTS',
 ]

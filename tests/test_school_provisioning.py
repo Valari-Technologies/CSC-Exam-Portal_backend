@@ -34,6 +34,8 @@ def school_payload(**overrides) -> dict:
         'admin_full_name': 'Prov Admin',
         'admin_email': 'prov.admin@prov.edu',     # LOGIN address — deliberately different
         'status': 'active',
+        'school_board': 'cbse',
+        'school_code': '33010100101',
     }
     payload.update(overrides)
     return payload

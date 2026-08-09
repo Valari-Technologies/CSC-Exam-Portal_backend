@@ -128,15 +128,17 @@ class SchoolIdGenerationTests(APITestCase):
             'admin_full_name': 'An Admin',
             'admin_email': admin_email,
             'status': 'active',
+            'school_board': 'cbse',
+            'school_code': '33010100101',
         }
         data.update(overrides)
         return data
 
-    def test_school_id_uses_first_three_letters_and_a_sequence(self):
+    def test_school_id_is_global_numeric_sequence(self):
         cases = [
-            ('Green Valley School', 'GRE_001'),
-            ('Alpha Public School', 'ALP_001'),
-            ('Bright Future Academy', 'BRI_001'),
+            ('Green Valley School', '001'),
+            ('Alpha Public School', '002'),
+            ('Bright Future Academy', '003'),
         ]
         for index, (name, expected) in enumerate(cases):
             resp = self.client.post(
@@ -145,25 +147,6 @@ class SchoolIdGenerationTests(APITestCase):
             self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
             self.assertEqual(resp.data['code'], expected)
 
-    def test_sequence_increments_within_a_prefix(self):
-        for index in range(3):
-            self.client.post(
-                self.url, self.payload('Green Valley School', f'g{index}@x.edu'), format='json',
-            )
-        codes = list(
-            School.objects.filter(code__startswith='GRE_').order_by('code')
-            .values_list('code', flat=True)
-        )
-        self.assertEqual(codes, ['GRE_001', 'GRE_002', 'GRE_003'])
-
-    def test_sequences_are_independent_per_prefix(self):
-        self.client.post(self.url, self.payload('Green Valley School', 'a@x.edu'), format='json')
-        resp = self.client.post(
-            self.url, self.payload('Alpha Public School', 'b@x.edu'), format='json',
-        )
-        # Alpha starts its own sequence rather than continuing Green's.
-        self.assertEqual(resp.data['code'], 'ALP_001')
-
     def test_client_supplied_code_is_ignored(self):
         resp = self.client.post(
             self.url,
@@ -171,28 +154,21 @@ class SchoolIdGenerationTests(APITestCase):
             format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(resp.data['code'], 'GRE_001')
+        self.assertEqual(resp.data['code'], '001')
         self.assertFalse(School.objects.filter(code='HACKED').exists())
 
     def test_school_id_cannot_be_edited(self):
-        school = make_school(code='KEEP001')
+        school = make_school(code='001')
         resp = self.client.patch(
             reverse('school-detail', args=[school.id]), {'code': 'CHANGED'}, format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         school.refresh_from_db()
-        # Read-only: the request succeeds but the School ID is untouched. It is the prefix
-        # of this school's student login IDs, so it must never move.
-        self.assertEqual(school.code, 'KEEP001')
+        self.assertEqual(school.code, '001')
 
     def test_generator_ignores_legacy_codes_that_predate_the_scheme(self):
-        # A hand-entered legacy code must neither collide with nor seed the new sequence.
         make_school(code='GREEN-OLD-1', name='Green Legacy School')
-        self.assertEqual(generate_school_id('Green Valley School'), 'GRE_001')
-
-    def test_generator_handles_names_with_too_few_letters(self):
-        self.assertEqual(generate_school_id('Z'), 'ZXX_001')
-        self.assertEqual(generate_school_id('123'), 'SCH_001')
+        self.assertEqual(generate_school_id('Green Valley School'), '001')
 
 
 class SchoolStatusTests(APITestCase):

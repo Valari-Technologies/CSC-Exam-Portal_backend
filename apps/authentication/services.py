@@ -122,9 +122,11 @@ def send_password_reset_email(user: User, *, frontend_url: str) -> None:
         )
     except Exception as exc:
         logger.exception('Failed to send password reset email to %s', user.email)
-        raise EmailDeliveryError(
-            f'Failed to send password reset email to {user.email}'
-        ) from exc
+        if not settings.DEBUG:
+            raise EmailDeliveryError(
+                f'Failed to send password reset email to {user.email}'
+            ) from exc
+
 
 
 def build_password_setup_link(user: User, *, frontend_url: str) -> str:
@@ -167,9 +169,11 @@ def send_password_setup_email(user: User, *, frontend_url: str) -> str:
         )
     except Exception as exc:
         logger.exception('Failed to send password setup email to %s', user.email)
-        raise EmailDeliveryError(
-            f'Failed to send password setup email to {user.email}'
-        ) from exc
+        if not settings.DEBUG:
+            raise EmailDeliveryError(
+                f'Failed to send password setup email to {user.email}'
+            ) from exc
+
 
     return setup_link
 
