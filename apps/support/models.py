@@ -51,6 +51,7 @@ class SupportRequest(models.Model):
     resolved_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+    deleted_by_school = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'support_requests'

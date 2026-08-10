@@ -197,3 +197,37 @@ class ReplySupportRequestTests(SupportRequestTestCase):
             'reply': 'Resolved.',
         }, format='json')
         self.assertEqual(len(mail.outbox), 0)
+
+
+class DeleteSupportRequestTests(SupportRequestTestCase):
+    def test_school_admin_delete_is_soft_delete_and_hides_from_school_admin_but_retains_for_super_admin(self):
+        request = self._create()
+        self.client.force_authenticate(self.admin_a)
+
+        # Deleting as School Admin
+        response = self.client.delete(f'{self.URL}{request.pk}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Verify it still exists in DB and has deleted_by_school=True
+        request.refresh_from_db()
+        self.assertTrue(request.deleted_by_school)
+
+        # Verify School Admin cannot see it anymore in list
+        response = self.client.get(self.URL)
+        self.assertEqual(response.data['count'], 0)
+
+        # Verify Super Admin can still see it in list
+        self.client.force_authenticate(self.csc_admin)
+        response = self.client.get(self.URL)
+        self.assertEqual(response.data['count'], 1)
+
+    def test_super_admin_delete_is_permanent_hard_delete(self):
+        request = self._create()
+        self.client.force_authenticate(self.csc_admin)
+
+        # Deleting as Super Admin
+        response = self.client.delete(f'{self.URL}{request.pk}/')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Verify it is deleted permanently from DB
+        self.assertFalse(SupportRequest.objects.filter(pk=request.pk).exists())

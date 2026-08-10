@@ -58,7 +58,7 @@ class SupportRequestViewSet(
             'school', 'raised_by', 'resolved_by',
         )
         if user.role == 'school_admin':
-            qs = qs.filter(school_id=user.school_id)
+            qs = qs.filter(school_id=user.school_id, deleted_by_school=False)
         # CSC Admin sees everything, filterable by status / school.
         status_param = self.request.query_params.get('status')
         if status_param:
@@ -72,6 +72,14 @@ class SupportRequestViewSet(
         user = self.request.user
         support_request = serializer.save(school=user.school, raised_by=user)
         self._notify_super_admins(support_request)
+
+    def perform_destroy(self, instance: SupportRequest) -> None:
+        user = self.request.user
+        if user.role == 'school_admin':
+            instance.deleted_by_school = True
+            instance.save()
+        else:
+            instance.delete()
 
     def _notify_super_admins(self, support_request: SupportRequest) -> None:
         """Tell every active Super Admin a new request came in, with a deep link."""
