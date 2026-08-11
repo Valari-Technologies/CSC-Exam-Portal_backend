@@ -37,6 +37,7 @@ class QuestionListSerializer(serializers.ModelSerializer):
             'school',
             'subject',
             'chapter',
+            'lesson',
             'question_text',
             'difficulty',
             'marks',
@@ -74,6 +75,7 @@ class QuestionDetailSerializer(serializers.ModelSerializer):
             'subject_name',
             'chapter',
             'chapter_name',
+            'lesson',
             'created_by',
             'created_by_name',
             'question_text',
@@ -110,6 +112,7 @@ class QuestionWriteSerializer(serializers.ModelSerializer):
         fields = (
             'subject',
             'chapter',
+            'lesson',
             'question_text',
             'question_image',
             'option_a',
@@ -147,6 +150,15 @@ class QuestionWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'chapter': 'Chapter does not belong to the selected subject.'}
             )
+
+        # Lesson validation
+        lesson = attrs.get('lesson') or (self.instance.lesson if self.instance else '')
+        if lesson:
+            valid_lessons = chapter.lessons or []
+            if lesson not in valid_lessons:
+                raise serializers.ValidationError(
+                    {'lesson': f"Lesson '{lesson}' is not one of the defined lessons for chapter '{chapter.name}'."}
+                )
 
         # School-scope validation
         request = self.context.get('request')
@@ -420,10 +432,20 @@ class QuestionBulkImportSerializer(serializers.Serializer):
         if chapter.subject_id != subject.pk:
             raise ValueError(f'Chapter "{chapter.name}" does not belong to subject "{subject.name}".')
 
+        lesson = row.get('lesson', '').strip()
+        if lesson:
+            valid_lessons = chapter.lessons or []
+            if lesson not in valid_lessons:
+                raise ValueError(
+                    f'Lesson "{lesson}" is not valid for chapter "{chapter.name}". '
+                    f'Available lessons: {", ".join(valid_lessons) or "None"}'
+                )
+
         return Question(
             school=school,
             subject=subject,
             chapter=chapter,
+            lesson=lesson,
             created_by=user,
             question_text=question_text,
             option_a=option_a,

@@ -102,6 +102,7 @@ class Chapter(models.Model):
     name = models.CharField(max_length=200)
     order_number = models.PositiveSmallIntegerField(default=1)
     description = models.TextField(blank=True)
+    lessons = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

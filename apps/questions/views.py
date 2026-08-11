@@ -195,20 +195,20 @@ class QuestionViewSet(viewsets.ModelViewSet):
         # Header row — required first, then optional
         writer.writerow([
             'question_text', 'option_a', 'option_b', 'option_c', 'option_d',
-            'correct_option', 'subject_id', 'chapter_name', 'difficulty',
+            'correct_option', 'subject_id', 'chapter_name', 'lesson', 'difficulty',
             'marks', 'explanation', 'negative_marks',
         ])
         # Example row 1
         writer.writerow([
             'What is 2 + 2?', '3', '4', '5', '6',
-            'b', subject_1, 'Basic Arithmetic', 'easy', '1',
+            'b', subject_1, 'Basic Arithmetic', 'Addition Intro', 'easy', '1',
             'Basic addition', '0',
         ])
         # Example row 2
         writer.writerow([
             'What is the capital of Tamil Nadu?',
             'Chennai', 'Coimbatore', 'Madurai', 'Salem',
-            'a', subject_2, 'Indian States', 'easy', '1',
+            'a', subject_2, 'Indian States', 'State Capitals', 'easy', '1',
             'Chennai is the capital of Tamil Nadu', '0',
         ])
 

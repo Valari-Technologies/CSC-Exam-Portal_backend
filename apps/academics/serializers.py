@@ -145,6 +145,7 @@ class ChapterSerializer(serializers.ModelSerializer):
             'order_number',
             'description',
             'is_active',
+            'lessons',
             'created_at',
         )
         read_only_fields = ('id', 'subject_name', 'created_at')

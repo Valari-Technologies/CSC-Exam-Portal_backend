@@ -18,6 +18,7 @@ class Question(models.Model):
     school = models.ForeignKey('schools.School', on_delete=models.CASCADE, related_name='questions')
     subject = models.ForeignKey('academics.Subject', on_delete=models.CASCADE, related_name='questions')
     chapter = models.ForeignKey('academics.Chapter', on_delete=models.CASCADE, related_name='questions')
+    lesson = models.CharField(max_length=255, blank=True, default='')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
 
     question_text = models.TextField()
