@@ -218,8 +218,8 @@ class QuestionImportTemplateTests(APITestCase):
         subject = make_subject(self.school, self.class_10, name='Mathematics')
         subject.code = generate_subject_id(self.school, 'Mathematics', 10)
         subject.save(update_fields=['code'])
-        Chapter.objects.create(subject=subject, name='Basic Arithmetic')
-        Chapter.objects.create(subject=subject, name='Indian States')
+        Chapter.objects.create(subject=subject, name='Basic Arithmetic', lessons=['Addition Intro'])
+        Chapter.objects.create(subject=subject, name='Indian States', lessons=['State Capitals'])
 
         resp = self.client.post(
             '/api/v1/questions/bulk-import/',

@@ -77,6 +77,7 @@ class ExamSessionViewSet(viewsets.GenericViewSet):
         if not user.is_authenticated:
             return ExamSession.objects.none()
 
+        params = self.request.query_params
         qs = self.queryset
 
         if user.role == 'csc_admin':
@@ -89,11 +90,29 @@ class ExamSessionViewSet(viewsets.GenericViewSet):
         elif user.school_id:
             # teacher / school_admin — own school only
             qs = qs.filter(test__school_id=user.school_id)
+            if user.role == 'teacher' and params.get('class_scope') == 'assigned':
+                from django.db.models import Q
+                from apps.teachers.models import TeacherAssignment
+                assignments = TeacherAssignment.objects.filter(teacher__user=user)
+                if not assignments.exists():
+                    return ExamSession.objects.none()
+                
+                q_objects = Q()
+                for assignment in assignments:
+                    if assignment.section_id:
+                        q_objects |= Q(
+                            student__student_profile__school_class_id=assignment.school_class_id,
+                            student__student_profile__section_id=assignment.section_id
+                        )
+                    else:
+                        q_objects |= Q(
+                            student__student_profile__school_class_id=assignment.school_class_id
+                        )
+                qs = qs.filter(q_objects)
         else:
             return ExamSession.objects.none()
 
         # Extra dashboard filters (evaluation dashboard)
-        params = self.request.query_params
         if params.get('status_in'):
             qs = qs.filter(status__in=params['status_in'].split(','))
         if params.get('subject'):

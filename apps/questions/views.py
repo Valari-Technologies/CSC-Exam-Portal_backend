@@ -55,7 +55,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
     # SubjectViewSet and ChapterViewSet.
     pagination_class = LargePagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['school', 'subject', 'chapter', 'difficulty', 'is_active']
+    filterset_fields = ['school', 'subject', 'chapter', 'lesson', 'difficulty', 'is_active']
     search_fields = ['question_text']
     ordering_fields = ['created_at', 'difficulty', 'marks']
     ordering = ['-created_at']

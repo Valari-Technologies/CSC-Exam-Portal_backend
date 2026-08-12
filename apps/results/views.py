@@ -70,6 +70,7 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         if not user.is_authenticated:
             return Result.objects.none()
 
+        params = self.request.query_params
         qs = self.queryset
 
         if user.role == 'csc_admin':
@@ -82,11 +83,29 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         elif user.school_id:
             # Teacher / School Admin — own school only
             qs = qs.filter(test__school_id=user.school_id)
+            if user.role == 'teacher' and params.get('class_scope') == 'assigned':
+                from django.db.models import Q
+                from apps.teachers.models import TeacherAssignment
+                assignments = TeacherAssignment.objects.filter(teacher__user=user)
+                if not assignments.exists():
+                    return Result.objects.none()
+                
+                q_objects = Q()
+                for assignment in assignments:
+                    if assignment.section_id:
+                        q_objects |= Q(
+                            student__student_profile__school_class_id=assignment.school_class_id,
+                            student__student_profile__section_id=assignment.section_id
+                        )
+                    else:
+                        q_objects |= Q(
+                            student__student_profile__school_class_id=assignment.school_class_id
+                        )
+                qs = qs.filter(q_objects)
         else:
             return Result.objects.none()
 
         # Extra history filters (published-results dashboard + export)
-        params = self.request.query_params
         if params.get('subject'):
             qs = qs.filter(test__subject_id=params['subject'])
         if params.get('school_class'):

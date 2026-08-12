@@ -258,6 +258,12 @@ class TestAssignmentListSerializer(serializers.ModelSerializer):
     section_name = serializers.CharField(
         source='section.name', read_only=True, default=None,
     )
+    subject_name = serializers.CharField(
+        source='test.subject.name', read_only=True, default=None,
+    )
+    assigned_by_name = serializers.SerializerMethodField()
+    chapter_name = serializers.SerializerMethodField()
+    lesson_name = serializers.SerializerMethodField()
 
     class Meta:
         model = TestAssignment
@@ -270,6 +276,10 @@ class TestAssignmentListSerializer(serializers.ModelSerializer):
             'class_name',
             'section',
             'section_name',
+            'subject_name',
+            'assigned_by_name',
+            'chapter_name',
+            'lesson_name',
             'start_datetime',
             'end_datetime',
             'availability',
@@ -277,6 +287,23 @@ class TestAssignmentListSerializer(serializers.ModelSerializer):
             'assigned_at',
         )
         read_only_fields = fields
+
+    def get_assigned_by_name(self, obj: TestAssignment) -> str | None:
+        if obj.assigned_by:
+            return obj.assigned_by.full_name or obj.assigned_by.username
+        return None
+
+    def get_chapter_name(self, obj: TestAssignment) -> str | None:
+        first_tq = obj.test.test_questions.select_related('question__chapter').first()
+        if first_tq and first_tq.question and first_tq.question.chapter:
+            return first_tq.question.chapter.name
+        return None
+
+    def get_lesson_name(self, obj: TestAssignment) -> str | None:
+        first_tq = obj.test.test_questions.first()
+        if first_tq and first_tq.question:
+            return first_tq.question.lesson
+        return None
 
     def get_availability(self, obj: TestAssignment) -> str:
         """Where this assignment sits in its window, decided by the SERVER clock.
