@@ -39,6 +39,7 @@ class ResultListSerializer(serializers.ModelSerializer):
     student_email = serializers.EmailField(source='student.email', read_only=True, allow_null=True)
     test_title = serializers.CharField(source='test.title', read_only=True)
     subject_name = serializers.CharField(source='test.subject.name', read_only=True)
+    lesson_name = serializers.SerializerMethodField()
     class_name = serializers.SerializerMethodField()
     section_name = serializers.SerializerMethodField()
 
@@ -54,6 +55,7 @@ class ResultListSerializer(serializers.ModelSerializer):
             'test',
             'test_title',
             'subject_name',
+            'lesson_name',
             'assignment',
             'obtained_marks',
             'total_marks',
@@ -79,6 +81,12 @@ class ResultListSerializer(serializers.ModelSerializer):
     def get_section_name(self, obj: Result) -> str | None:
         profile = self._profile(obj)
         return profile.section.name if profile and profile.section_id else None
+
+    def get_lesson_name(self, obj: Result) -> str | None:
+        first_tq = obj.test.test_questions.first()
+        if first_tq and first_tq.question:
+            return first_tq.question.lesson
+        return None
 
 
 class ResultDetailSerializer(serializers.ModelSerializer):

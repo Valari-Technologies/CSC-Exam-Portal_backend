@@ -106,6 +106,8 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
             return Result.objects.none()
 
         # Extra history filters (published-results dashboard + export)
+        if params.get('lesson'):
+            qs = qs.filter(test__test_questions__question__lesson=params['lesson']).distinct()
         if params.get('subject'):
             qs = qs.filter(test__subject_id=params['subject'])
         if params.get('school_class'):

@@ -113,6 +113,10 @@ class ExamSessionViewSet(viewsets.GenericViewSet):
             return ExamSession.objects.none()
 
         # Extra dashboard filters (evaluation dashboard)
+        if params.get('lesson'):
+            qs = qs.filter(test__test_questions__question__lesson=params['lesson']).distinct()
+        if params.get('chapter'):
+            qs = qs.filter(test__test_questions__question__chapter_id=params['chapter']).distinct()
         if params.get('status_in'):
             qs = qs.filter(status__in=params['status_in'].split(','))
         if params.get('subject'):

@@ -57,6 +57,7 @@ class ExamSessionListSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
     test_title = serializers.CharField(source='test.title', read_only=True)
     subject_name = serializers.CharField(source='test.subject.name', read_only=True)
+    lesson_name = serializers.SerializerMethodField()
     class_name = serializers.SerializerMethodField()
     section_name = serializers.SerializerMethodField()
     obtained_marks = serializers.SerializerMethodField()
@@ -77,6 +78,7 @@ class ExamSessionListSerializer(serializers.ModelSerializer):
             'test',
             'test_title',
             'subject_name',
+            'lesson_name',
             'assignment',
             'status',
             'started_at',
@@ -103,6 +105,12 @@ class ExamSessionListSerializer(serializers.ModelSerializer):
     def get_section_name(self, obj: ExamSession) -> str | None:
         profile = self._profile(obj)
         return profile.section.name if profile and profile.section_id else None
+
+    def get_lesson_name(self, obj: ExamSession) -> str | None:
+        first_tq = obj.test.test_questions.first()
+        if first_tq and first_tq.question:
+            return first_tq.question.lesson
+        return None
 
     def _result(self, obj: ExamSession):
         # OneToOne reverse — select_related('result') makes this free.
