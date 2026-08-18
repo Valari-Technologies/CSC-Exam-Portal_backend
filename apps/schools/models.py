@@ -32,6 +32,7 @@ class School(models.Model):
         help_text='Official contact email for the school. Not used for login or password reset.',
     )
     contact_phone = models.CharField(max_length=20)
+    lan = models.CharField(max_length=20, blank=True, default='', help_text='School landline number (LAN).')
     logo = models.ImageField(upload_to='schools/logos/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE, db_index=True)
     school_board = models.CharField(

@@ -20,6 +20,7 @@ class TeacherProfile(models.Model):
         help_text='Teacher ID — auto-generated from the School ID (e.g. KAR_TR_001).',
     )
     employee_id = models.CharField(max_length=50, blank=True)
+    contact_number = models.CharField(max_length=20, blank=True, default='')
     # Blank is a real answer here, not a placeholder: teachers created before this field
     # existed have no value, and the form does not force one.
     gender = models.CharField(max_length=10, choices=Gender.choices, blank=True, default='')

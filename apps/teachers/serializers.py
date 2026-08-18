@@ -65,6 +65,7 @@ class TeacherProfileListSerializer(serializers.ModelSerializer):
             'school_code',
             'teacher_id',
             'employee_id',
+            'contact_number',
             'gender',
             'qualification',
             'joining_date',
@@ -95,6 +96,7 @@ class TeacherProfileDetailSerializer(serializers.ModelSerializer):
             'school_code',
             'teacher_id',
             'employee_id',
+            'contact_number',
             'gender',
             'qualification',
             'joining_date',
@@ -110,6 +112,7 @@ class TeacherProfileDetailSerializer(serializers.ModelSerializer):
             'school_code',
             'teacher_id',
             'employee_id',
+            'contact_number',
             'gender',
             'qualification',
             'joining_date',
@@ -144,6 +147,7 @@ class TeacherProfileWriteSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=255)
     school = serializers.PrimaryKeyRelatedField(queryset=School.objects.all(), required=False)
     employee_id = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
+    contact_number = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
     gender = serializers.ChoiceField(
         choices=TeacherProfile.Gender.choices,
         required=False,
@@ -294,6 +298,7 @@ class TeacherProfileWriteSerializer(serializers.Serializer):
             # the school's own free-text reference.
             teacher_id=generate_teacher_id(school),
             employee_id=validated_data.get('employee_id', ''),
+            contact_number=validated_data.get('contact_number', ''),
             gender=validated_data.get('gender', ''),
             qualification=validated_data.get('qualification', ''),
             joining_date=validated_data.get('joining_date'),
@@ -343,7 +348,7 @@ class TeacherProfileWriteSerializer(serializers.Serializer):
             instance.is_active = validated_data['is_active']
         user.save()
 
-        for field in ('employee_id', 'gender', 'qualification', 'joining_date'):
+        for field in ('employee_id', 'gender', 'qualification', 'joining_date', 'contact_number'):
             if field in validated_data:
                 setattr(instance, field, validated_data[field])
         instance.save()
