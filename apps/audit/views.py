@@ -18,8 +18,13 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['action', 'status', 'user']
-    search_fields = ['user__email', 'entity_type', 'action']
+    filterset_fields = {
+        'action': ['exact'],
+        'status': ['exact'],
+        'user': ['exact'],
+        'created_at': ['gte', 'lte'],
+    }
+    search_fields = ['user__email', 'user__student_id', 'entity_type', 'action']
     ordering_fields = ['created_at', 'action']
     ordering = ['-created_at']
 
