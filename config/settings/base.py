@@ -3,9 +3,16 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import dj_database_url
 import environ
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Load backend/.env into os.environ. The explicit path matters: bare load_dotenv()
+# searches upward from the *current working directory*, so it would miss the file
+# whenever the server is started from the repo root instead of backend/.
+load_dotenv(BASE_DIR / '.env')
 
 env = environ.Env(
     DEBUG=(bool, False),
@@ -114,7 +121,11 @@ ASGI_APPLICATION = 'config.asgi.application'
 # Windows PostgreSQL. DATABASE_URL is always supplied by backend/.env (host runs,
 # localhost:15432) or docker-compose (container runs, db:5432).
 DATABASES = {
-    'default': env.db('DATABASE_URL'),
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL'),
+        conn_max_age=0,
+        conn_health_checks=True,
+    ),
 }
 DATABASES['default']['ATOMIC_REQUESTS'] = True
 
