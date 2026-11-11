@@ -195,7 +195,10 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS')
+CORS_ALLOWED_ORIGINS = [
+    "https://csc-exam-portal-frontend-72jt8ifhf-mk-15a8.vercel.app",
+    "http://localhost:5173",  # vite dev
+]
 CORS_ALLOW_CREDENTIALS = True
 
 # django-allauth (Google OAuth)
