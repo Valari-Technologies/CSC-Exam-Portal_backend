@@ -12,7 +12,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # EMAIL_HOST_USER/EMAIL_HOST_PASSWORD set — this line hard-forced the console backend.
 EMAIL_BACKEND = (
     'django.core.mail.backends.smtp.EmailBackend'
-    if EMAIL_HOST and EMAIL_HOST_USER  # noqa: F405
+    if EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD  # noqa: F405
     else 'django.core.mail.backends.console.EmailBackend'
 )
 

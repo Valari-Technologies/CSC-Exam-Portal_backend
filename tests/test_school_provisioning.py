@@ -4,6 +4,8 @@ The architectural rule these tests defend: a School's official_email is a CONTAC
 and can never authenticate anyone; a School Admin's login email lives on the User and is
 the only thing that can. Creating a school provisions both, atomically.
 """
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import override_settings
@@ -236,6 +238,20 @@ class PasswordResetRoutingTests(APITestCase):
             format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend')
+    @patch('apps.authentication.services.send_mail', side_effect=OSError('SMTP unavailable'))
+    def test_smtp_failure_is_not_reported_as_a_success_in_debug(self, send_mail):
+        admin = make_user(User.Role.SCHOOL_ADMIN, make_school(), email='admin@sch.edu')
+
+        resp = self.client.post(
+            reverse('authentication:password-reset'),
+            {'email': admin.email},
+            format='json',
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        send_mail.assert_called_once()
 
 
 class MustChangePasswordTests(APITestCase):

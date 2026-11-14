@@ -96,7 +96,7 @@ def get_user_from_password_reset(uid: str, token: str) -> Optional[User]:
 
 
 def send_password_reset_email(user: User, *, frontend_url: str) -> None:
-    """Send a password reset email. In DEBUG, this just logs the link to the console."""
+    """Send a password reset email using the configured Django email backend."""
     uid, token = build_password_reset_uid_token(user)
     reset_link = f'{frontend_url.rstrip("/")}/reset-password?uid={uid}&token={token}'
     subject = 'Reset your CSC Exam Portal password'
@@ -122,10 +122,9 @@ def send_password_reset_email(user: User, *, frontend_url: str) -> None:
         )
     except Exception as exc:
         logger.exception('Failed to send password reset email to %s', user.email)
-        if not settings.DEBUG:
-            raise EmailDeliveryError(
-                f'Failed to send password reset email to {user.email}'
-            ) from exc
+        raise EmailDeliveryError(
+            f'Failed to send password reset email to {user.email}'
+        ) from exc
 
 
 
@@ -169,10 +168,9 @@ def send_password_setup_email(user: User, *, frontend_url: str) -> str:
         )
     except Exception as exc:
         logger.exception('Failed to send password setup email to %s', user.email)
-        if not settings.DEBUG:
-            raise EmailDeliveryError(
-                f'Failed to send password setup email to {user.email}'
-            ) from exc
+        raise EmailDeliveryError(
+            f'Failed to send password setup email to {user.email}'
+        ) from exc
 
 
     return setup_link

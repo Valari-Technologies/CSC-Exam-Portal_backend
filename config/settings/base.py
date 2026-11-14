@@ -230,9 +230,6 @@ SOCIALACCOUNT_PROVIDERS = {
 # Frontend URL (used in password reset emails)
 FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
 
-# Default From email
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@csc-exam-portal.local')
-
 # SMTP email (backend selected per-environment; production uses real SMTP)
 EMAIL_HOST = env('EMAIL_HOST', default='')
 EMAIL_PORT = env('EMAIL_PORT')
@@ -240,6 +237,12 @@ EMAIL_USE_TLS = env('EMAIL_USE_TLS')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 EMAIL_TIMEOUT = env('EMAIL_TIMEOUT')
+
+# Default From email; use the authenticated SMTP account when no sender is specified.
+DEFAULT_FROM_EMAIL = env(
+    'DEFAULT_FROM_EMAIL',
+    default=EMAIL_HOST_USER or 'noreply@csc-exam-portal.local',
+)
 
 # Password reset link validity (seconds)
 PASSWORD_RESET_TIMEOUT = env('PASSWORD_RESET_TIMEOUT')
